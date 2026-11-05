@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimentações | CredMais</title>
+    <link rel="icon" type="image/png" href="../static/uploads/LogoSoloCrediMais.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_movimentacoes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
+</head>
+<body>
+    {% set pagina_ativa = 'movimentacoes' %}
+<header class="cabecalho-padrao">
+    <a href="{{ url_for('dashboard') }}" class="cabecalho-logo">
+        <img src="{{ url_for('static', filename='uploads/LogoSoloCrediMais.png') }}" alt="Logo CredMais" class="cabecalho-simbolo">
+        <span class="cabecalho-texto">
+            <span class="cabecalho-nome"><span class="nome-azul">Cred</span><span class="nome-verde">Mais</span></span>
+            <span class="cabecalho-slogan">Gestão de crédito para<br>pequenos negócios</span>
+        </span>
+    </a>
+    <nav class="cabecalho-menu">
+        <a href="{{ url_for('dashboard') }}" class="{% if pagina_ativa == 'dashboard' %}ativo{% endif %}">Dashboard</a>
+        {% if eh_admin %}<a href="{{ url_for('listar_taxas') }}" class="{% if pagina_ativa == 'taxas' %}ativo{% endif %}">Taxas</a>{% endif %}
+        <a href="{{ url_for('simulacao') }}" class="{% if pagina_ativa == 'simulacao' %}ativo{% endif %}">Simulação</a>
+        <a href="{{ url_for('historico_emprestimos') }}" class="{% if pagina_ativa == 'emprestimos' %}ativo{% endif %}">Empréstimos</a>
+        <a href="{{ url_for('movimentacoes') }}" class="{% if pagina_ativa == 'movimentacoes' %}ativo{% endif %}">Movimentações</a>
+    </nav>
+    {% if session.get('usuario_id') %}
+    <div class="cabecalho-usuario">
+        <button type="button" class="botao-perfil-header" onclick="alternarMenuPerfil()" aria-label="Abrir opções do perfil" aria-expanded="false">
+            <img class="foto-perfil-header" src="{{ url_for('static', filename='uploads/' ~ session.get('usuario_foto', 'perfil-padrao.png')) }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='uploads/perfil-padrao.png') }}'" alt="Foto de perfil">
+        </button>
+        <div class="dados-usuario">
+            <span class="nome-usuario-header">{{ session.get('usuario_nome', '') }}</span>
+            <span class="email-usuario-header">{{ session.get('usuario_email', '') }}</span>
+            <button type="button" class="seta-perfil-header" onclick="alternarMenuPerfil()" aria-label="Mostrar opções do perfil" aria-expanded="false">
+                <img src="{{ url_for('static', filename='uploads/seta_indicadora.png') }}" alt="">
+            </button>
+            <div class="menu-perfil-header" id="menuPerfilHeader">
+                <a href="{{ url_for('perfil') }}" class="botao-editar-perfil">Editar perfil</a>
+                <button type="button" class="botao-sair-header" onclick="abrirModal()">Sair</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</header>
+<main class="conteudo">
+
+    <h1 class="titulo-mobile">Movimentações</h1>
+
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% for categoria_msg, mensagem in mensagens %}
+    <div class="mensagem {{ categoria_msg }}">{{ mensagem }}</div>
+    {% endfor %}
+    {% endwith %}
+    <section class="saldo">
+        <div class="saldo-esquerda">
+            <div class="icone icone-azul">
+                <img src="{{ url_for('static', filename='uploads/icone-rotacao-monetaria.png') }}" alt="">
+            </div>
+            <h2>Saldo Atual</h2>
+        </div>
+        <strong class="valor-saldo">
+            R$ {{ saldo_texto }}
+        </strong>
+    </section>
+    <section class="resumos">
+        <article class="cartao-resumo">
+            <div class="icone icone-verde">
+                <img
+                        src="{{ url_for('static', filename='uploads/icone-receita-positiva.png') }}"
+                        alt=""
+                >
+            </div>
+            <h2>Receitas</h2>
+            <div class="resumo-valor">
+                <strong>
+                    + R$ {{ receitas_texto }} </strong>
+
+                <small>Nos últimos 30 dias</small>
+            </div>
+        </article>
+        <article class="cartao-resumo">
+            <div class="icone icone-vermelho">
+                <img
+                        src="{{ url_for('static', filename='uploads/icone-despesas.png') }}"
+                        alt="">
+            </div>
+            <h2>Despesas</h2>
+            <div class="resumo-valor">
+                <strong>
+                    - R$ {{ despesas_texto }} </strong>
+                <small>Nos últimos 30 dias</small>
+            </div>
+        </article>
+    </section>
+    <section class="acoes">
+        <a
+                href="{{ url_for('nova_movimentacao') }}"
+                class="botao botao-adicionar"
+                aria-label="Adicionar Movimentação"
+        >
+            <span class="icone-botao">+</span>
+            <span class="texto-botao">Adicionar Movimentação</span>
+        </a>
+
+        <!-- seleção de período: cada link recarrega a página com ?periodo=... -->
+        <div class="seletor-periodo">
+            <a href="{{ url_for('movimentacoes', periodo='ultimos') }}"
+               class="{% if periodo == 'ultimos' %}selecionado{% endif %}">Últimos 3 Meses</a>
+            <a href="{{ url_for('movimentacoes', periodo='proximos') }}"
+               class="{% if periodo == 'proximos' %}selecionado{% endif %}">Próximos 3 Meses</a>
+            <a href="{{ url_for('movimentacoes', periodo='todos') }}"
+               class="{% if periodo == 'todos' %}selecionado{% endif %}">Todo o Tempo</a>
+        </div>
+
+        <a
+                href="{{ url_for('relatorio', periodo=periodo) }}"
+                class="botao botao-pdf"
+                aria-label="Baixar como PDF"
+        >
+            <img
+                    src="{{ url_for('static', filename='uploads/icone-download.png') }}"
+                    alt=""
+                    class="icone-download"
+            >
+            <span class="texto-botao">Baixar como PDF</span>
+        </a>
+    </section>
+    <section class="tabela-container">
+        <table>
+            <thead>
+            <tr>
+                <th>Data</th>
+                <th class="descricao">Descrição</th>
+                <th>Classificação</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in dados %}
+            <tr class="linha-clicavel"
+                onclick="window.location='{{ url_for('visualizar_movimentacao', id_mov=item.id) }}'">
+                <td data-label="Data">{{ item.data }}</td>
+                <td class="descricao">
+                    <a href="{{ url_for('visualizar_movimentacao', id_mov=item.id) }}">{{ item.descricao }}</a>
+                </td>
+                <td data-label="Classificação">{{ item.classificacao }}</td>
+                <td class="categoria">{{ item.categoria }}</td>
+
+                <td class="valor {{ item.classe }}">
+                    {{ item.sinal }}
+                    R$ {{ item.valor_texto }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">Nenhuma movimentação neste período.</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<div class="fundo-modal" id="modalSair" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tituloModalSair">
+    <div class="modal">
+        <div class="icone-sair"><img src="{{ url_for('static', filename='uploads/icone-sair.png') }}" alt="Ícone de sair"></div>
+        <h2 id="tituloModalSair">Deseja realmente sair?</h2>
+        <p>Suas informações serão mantidas.</p>
+        <div class="botoes-modal"><button type="button" class="botao-sair" onclick="sairDaConta()">Sair</button><button type="button" class="botao-cancelar" onclick="fecharModal()">Cancelar</button></div>
+    </div>
+</div>
+<script>
+function alternarMenuPerfil() {
+    const menu = document.getElementById("menuPerfilHeader");
+    const dados = document.querySelector(".dados-usuario");
+    const aberto = menu.classList.toggle("menu-aberto");
+    dados.classList.toggle("menu-aberto", aberto);
+    document.querySelectorAll(".botao-perfil-header, .seta-perfil-header").forEach(function(botao) {
+        botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+    });
+}
+function abrirModal() { document.getElementById("modalSair").style.display = "flex"; }
+function fecharModal() { document.getElementById("modalSair").style.display = "none"; }
+function sairDaConta() { window.location.assign("{{ url_for('logout') }}"); }
+document.getElementById("modalSair").addEventListener("click", function(event) { if (event.target === this) fecharModal(); });
+document.addEventListener("keydown", function(event) { if (event.key === "Escape") fecharModal(); });
+</script>
+
+</body>
+</html>

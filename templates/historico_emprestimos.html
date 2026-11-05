@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title> Detalhes do Empréstimo - CredMais</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/historico_emprestimos.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+        <link rel="icon" type="image/png" href="../static/uploads/LogoSoloCrediMais.png">
+        <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
+</head>
+    <body>
+
+    {% set pagina_ativa = 'emprestimos' %}
+<header class="cabecalho-padrao">
+    <a href="{{ url_for('dashboard') }}" class="cabecalho-logo">
+        <img src="{{ url_for('static', filename='uploads/LogoSoloCrediMais.png') }}" alt="Logo CredMais" class="cabecalho-simbolo">
+        <span class="cabecalho-texto">
+            <span class="cabecalho-nome"><span class="nome-azul">Cred</span><span class="nome-verde">Mais</span></span>
+            <span class="cabecalho-slogan">Gestão de crédito para<br>pequenos negócios</span>
+        </span>
+    </a>
+    <nav class="cabecalho-menu">
+        <a href="{{ url_for('dashboard') }}" class="{% if pagina_ativa == 'dashboard' %}ativo{% endif %}">Dashboard</a>
+        {% if eh_admin %}<a href="{{ url_for('listar_taxas') }}" class="{% if pagina_ativa == 'taxas' %}ativo{% endif %}">Taxas</a>{% endif %}
+        <a href="{{ url_for('simulacao') }}" class="{% if pagina_ativa == 'simulacao' %}ativo{% endif %}">Simulação</a>
+        <a href="{{ url_for('historico_emprestimos') }}" class="{% if pagina_ativa == 'emprestimos' %}ativo{% endif %}">Empréstimos</a>
+        <a href="{{ url_for('movimentacoes') }}" class="{% if pagina_ativa == 'movimentacoes' %}ativo{% endif %}">Movimentações</a>
+    </nav>
+    {% if session.get('usuario_id') %}
+    <div class="cabecalho-usuario">
+        <button type="button" class="botao-perfil-header" onclick="alternarMenuPerfil()" aria-label="Abrir opções do perfil" aria-expanded="false">
+            <img class="foto-perfil-header" src="{{ url_for('static', filename='uploads/' ~ session.get('usuario_foto', 'perfil-padrao.png')) }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='uploads/perfil-padrao.png') }}'" alt="Foto de perfil">
+        </button>
+        <div class="dados-usuario">
+            <span class="nome-usuario-header">{{ session.get('usuario_nome', '') }}</span>
+            <span class="email-usuario-header">{{ session.get('usuario_email', '') }}</span>
+            <button type="button" class="seta-perfil-header" onclick="alternarMenuPerfil()" aria-label="Mostrar opções do perfil" aria-expanded="false">
+                <img src="{{ url_for('static', filename='uploads/seta_indicadora.png') }}" alt="">
+            </button>
+            <div class="menu-perfil-header" id="menuPerfilHeader">
+                <a href="{{ url_for('perfil') }}" class="botao-editar-perfil">Editar perfil</a>
+                <button type="button" class="botao-sair-header" onclick="abrirModal()">Sair</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</header>
+        <main class="pagina">
+
+            <section>
+                 <div class="titulo">
+                    <h1>Histórico de Empréstimos</h1>
+                </div>
+
+                <div>
+                    <a href="{{ url_for('simulacao') }}" class="botao_simular_emprestimo">Simular novo empréstimo</a>
+                </div>
+                {% with mensagens = get_flashed_messages(with_categories=true) %}
+                    {% for categoria_msg, mensagem in mensagens %}
+                    <div class="mensagem {{ categoria_msg }}">{{ mensagem }}</div>
+                    {% endfor %}
+                {% endwith %}
+                <div class="seletor-periodo">
+                    <a href="{{ url_for('historico_emprestimos', periodo='ultimos') }}" class="{% if periodo == 'ultimos' %}selecionado{% endif %}">Últimos 3 Meses</a>
+                    <a href="{{ url_for('historico_emprestimos', periodo='proximos') }}" class="{% if periodo == 'proximos' %}selecionado{% endif %}">Próximos 3 Meses</a>
+                    <a href="{{ url_for('historico_emprestimos', periodo='todos') }}" class="{% if periodo == 'todos' %}selecionado{% endif %}">Todo o Tempo</a>
+                </div>
+
+            <section class="tabela-container">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Classificação</th>
+                        <th>Categoria</th>
+                        <th>Valor</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in dados %}
+                    <tr class="linha-clicavel" title="Clique para ver os detalhes"
+                        onclick="window.location='{{ url_for('visualizar_emprestimo', id_emprestimo=item.id) }}'">
+                        <td data-label="Data">{{ item.data }}</td>
+                        <td class="descricao">
+                            <a href="{{ url_for('visualizar_emprestimo', id_emprestimo=item.id) }}">{{ item.descricao }}</a>
+                        </td>
+                        <td data-label="Classificação">{{ item.classificacao }}</td>
+                        <td class="categoria">{{ item.categoria }}</td>
+                        <td class="valor">R$ {{ item.valor_texto }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">Nenhuma empréstimo até o momento.</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            <div class="botoes-inferiores">
+                <a href="{{ url_for('relatorio_emprestimos', periodo=periodo) }}" class="baixar_pdf">Baixar como PDF</a>
+                <a href="{{ url_for('dashboard') }}" class="voltar">Voltar</a>
+            </div>
+            </section>
+        </main>
+    
+<div class="fundo-modal" id="modalSair" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tituloModalSair">
+    <div class="modal">
+        <div class="icone-sair"><img src="{{ url_for('static', filename='uploads/icone-sair.png') }}" alt="Ícone de sair"></div>
+        <h2 id="tituloModalSair">Deseja realmente sair?</h2>
+        <p>Suas informações serão mantidas.</p>
+        <div class="botoes-modal"><button type="button" class="botao-sair" onclick="sairDaConta()">Sair</button><button type="button" class="botao-cancelar" onclick="fecharModal()">Cancelar</button></div>
+    </div>
+</div>
+<script>
+function alternarMenuPerfil() {
+    const menu = document.getElementById("menuPerfilHeader");
+    const dados = document.querySelector(".dados-usuario");
+    const aberto = menu.classList.toggle("menu-aberto");
+    dados.classList.toggle("menu-aberto", aberto);
+    document.querySelectorAll(".botao-perfil-header, .seta-perfil-header").forEach(function(botao) {
+        botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+    });
+}
+function abrirModal() { document.getElementById("modalSair").style.display = "flex"; }
+function fecharModal() { document.getElementById("modalSair").style.display = "none"; }
+function sairDaConta() { window.location.assign("{{ url_for('logout') }}"); }
+document.getElementById("modalSair").addEventListener("click", function(event) { if (event.target === this) fecharModal(); });
+document.addEventListener("keydown", function(event) { if (event.key === "Escape") fecharModal(); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova movimentação | CredMais</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/estilo_movimentacoes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link rel="icon" type="image/png" href="../static/uploads/LogoSoloCrediMais.png">
+
+    <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
+</head>
+<body>
+
+    {% set pagina_ativa = 'movimentacoes' %}
+<header class="cabecalho-padrao">
+    <a href="{{ url_for('dashboard') }}" class="cabecalho-logo">
+        <img src="{{ url_for('static', filename='uploads/LogoSoloCrediMais.png') }}" alt="Logo CredMais" class="cabecalho-simbolo">
+        <span class="cabecalho-texto">
+            <span class="cabecalho-nome"><span class="nome-azul">Cred</span><span class="nome-verde">Mais</span></span>
+            <span class="cabecalho-slogan">Gestão de crédito para<br>pequenos negócios</span>
+        </span>
+    </a>
+    <nav class="cabecalho-menu">
+        <a href="{{ url_for('dashboard') }}" class="{% if pagina_ativa == 'dashboard' %}ativo{% endif %}">Dashboard</a>
+        {% if eh_admin %}<a href="{{ url_for('listar_taxas') }}" class="{% if pagina_ativa == 'taxas' %}ativo{% endif %}">Taxas</a>{% endif %}
+        <a href="{{ url_for('simulacao') }}" class="{% if pagina_ativa == 'simulacao' %}ativo{% endif %}">Simulação</a>
+        <a href="{{ url_for('historico_emprestimos') }}" class="{% if pagina_ativa == 'emprestimos' %}ativo{% endif %}">Empréstimos</a>
+        <a href="{{ url_for('movimentacoes') }}" class="{% if pagina_ativa == 'movimentacoes' %}ativo{% endif %}">Movimentações</a>
+    </nav>
+    {% if session.get('usuario_id') %}
+    <div class="cabecalho-usuario">
+        <button type="button" class="botao-perfil-header" onclick="alternarMenuPerfil()" aria-label="Abrir opções do perfil" aria-expanded="false">
+            <img class="foto-perfil-header" src="{{ url_for('static', filename='uploads/' ~ session.get('usuario_foto', 'perfil-padrao.png')) }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='uploads/perfil-padrao.png') }}'" alt="Foto de perfil">
+        </button>
+        <div class="dados-usuario">
+            <span class="nome-usuario-header">{{ session.get('usuario_nome', '') }}</span>
+            <span class="email-usuario-header">{{ session.get('usuario_email', '') }}</span>
+            <button type="button" class="seta-perfil-header" onclick="alternarMenuPerfil()" aria-label="Mostrar opções do perfil" aria-expanded="false">
+                <img src="{{ url_for('static', filename='uploads/seta_indicadora.png') }}" alt="">
+            </button>
+            <div class="menu-perfil-header" id="menuPerfilHeader">
+                <a href="{{ url_for('perfil') }}" class="botao-editar-perfil">Editar perfil</a>
+                <button type="button" class="botao-sair-header" onclick="abrirModal()">Sair</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</header>
+    <main class="pagina-movimentacao">
+        <section class="titulo-pagina">
+            <div class="icone-calculadora">
+                <img
+                    src="{{ url_for('static', filename='uploads/icone-calculadora.png') }}"
+                    alt="Calculadora"
+                >
+            </div>
+            <div>
+                <h1>Nova movimentação</h1>
+                <p>Informe os dados e adicione uma nova despesa ou receita.</p>
+            </div>
+        </section>
+        {% with mensagens = get_flashed_messages(with_categories=true) %}
+            {% if mensagens %}
+                {% for categoria_msg, mensagem in mensagens %}
+                    <div class="mensagem {{ categoria_msg }}">
+                        {{ mensagem }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <section class="formulario-card">
+            <form action="{{ url_for('nova_movimentacao') }}" method="POST">
+                <div class="campo">
+                    <label for="valor">Valor da Movimentação</label>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        class="campo-dinheiro"
+                        id="valor"
+                        name="valor"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="R$ 0,00"
+                        required
+                    >
+                </div>
+                <div class="campo">
+                    <label for="tipo">Tipo de Movimentação</label>
+                    <input
+                        type="text"
+                        id="tipo"
+                        name="tipo"
+                        placeholder="Ex.: Pagamento, empréstimo..."
+                        maxlength="100"
+                        required
+                    >
+                </div>
+
+                 <div class="campo">
+                    <label for="classificacao">Classificação</label>
+                    <select id="classificacao" name="classificacao" onchange="mostrarMeses()"> <!-- select: lista de opcoes. onchange chama a funcao quando troca -->
+                        <option value="2">Variável</option> <!-- option: cada opcao da lista -->
+                        <option value="1">Fixa</option>
+                    </select>
+                    <small class="nota-classificacao">Fixa: se repete todo mês. Variável: muda de valor ou acontece só às vezes.</small>
+                </div>
+                <div class="campo" id="campo-meses" style="display: none;">
+                    <label for="meses">Durante quantos meses?</label>
+                    <input type="number" id="meses" name="meses" min="1" max="120" value="1">
+                </div>
+
+                <fieldset class="campo-categoria">
+                    <legend>Categoria</legend>
+                    <div class="opcoes-categoria">
+                        <label class="opcao">
+                            <span class="icone-categoria receita-icone">
+                                <img
+                                    src="{{ url_for('static', filename='uploads/icone-receita-positiva.png') }}"
+                                    alt="Ícone de receita"
+                                >
+                            </span>
+                            <span class="texto-opcao">Receita</span>
+                            <input
+                                type="radio"
+                                name="categoria"
+                                value="Receita"
+                                required
+                            >
+                            <span class="radio-personalizado"></span>
+                        </label>
+                        <label class="opcao">
+                            <span class="icone-categoria despesa-icone">
+                                <img
+                                    src="{{ url_for('static', filename='uploads/icone-despesas.png') }}"
+                                    alt="Ícone de despesa"
+                                >
+                            </span>
+                            <span class="texto-opcao">Despesa</span>
+                            <input
+                                type="radio"
+                                name="categoria"
+                                value="Despesa"
+                                required
+                            >
+                            <span class="radio-personalizado"></span>
+                        </label>
+                    </div>
+                </fieldset>
+                <div class="botoes-formulario">
+                    <button type="submit" class="botao-registrar">
+                        Registrar
+                    </button>
+                    <a href="{{ url_for('movimentacoes') }}" class="botao-cancelar">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </section>
+    </main>
+    <!-- script: mostra o campo de meses so quando for fixa -->
+    <script>
+    function mostrarMeses() {
+        var classificacao = document.getElementById("classificacao").value;
+        if (classificacao == "1") {
+            document.getElementById("campo-meses").style.display = "flex";
+        } else {
+            document.getElementById("campo-meses").style.display = "none";
+        }
+    }
+    </script>
+
+<div class="fundo-modal" id="modalSair" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tituloModalSair">
+    <div class="modal">
+        <div class="icone-sair"><img src="{{ url_for('static', filename='uploads/icone-sair.png') }}" alt="Ícone de sair"></div>
+        <h2 id="tituloModalSair">Deseja realmente sair?</h2>
+        <p>Suas informações serão mantidas.</p>
+        <div class="botoes-modal"><button type="button" class="botao-sair" onclick="sairDaConta()">Sair</button><button type="button" class="botao-cancelar" onclick="fecharModal()">Cancelar</button></div>
+    </div>
+</div>
+<script>
+function alternarMenuPerfil() {
+    const menu = document.getElementById("menuPerfilHeader");
+    const dados = document.querySelector(".dados-usuario");
+    const aberto = menu.classList.toggle("menu-aberto");
+    dados.classList.toggle("menu-aberto", aberto);
+    document.querySelectorAll(".botao-perfil-header, .seta-perfil-header").forEach(function(botao) {
+        botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+    });
+}
+function abrirModal() { document.getElementById("modalSair").style.display = "flex"; }
+function fecharModal() { document.getElementById("modalSair").style.display = "none"; }
+function sairDaConta() { window.location.assign("{{ url_for('logout') }}"); }
+document.getElementById("modalSair").addEventListener("click", function(event) { if (event.target === this) fecharModal(); });
+document.addEventListener("keydown", function(event) { if (event.key === "Escape") fecharModal(); });
+</script>
+
+<script src="{{ url_for('static', filename='js/mascara_monetaria.js') }}"></script>
+</body>
+</html>

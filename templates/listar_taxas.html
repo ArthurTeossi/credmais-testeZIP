@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrar - Taxas</title>
+    <link rel="icon" type="image/png" href="../static/uploads/LogoSoloCrediMais.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/taxas_listar.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
+</head>
+
+<body>
+
+    {% set pagina_ativa = 'taxas' %}
+<header class="cabecalho-padrao">
+    <a href="{{ url_for('dashboard') }}" class="cabecalho-logo">
+        <img src="{{ url_for('static', filename='uploads/LogoSoloCrediMais.png') }}" alt="Logo CredMais" class="cabecalho-simbolo">
+        <span class="cabecalho-texto">
+            <span class="cabecalho-nome"><span class="nome-azul">Cred</span><span class="nome-verde">Mais</span></span>
+            <span class="cabecalho-slogan">Gestão de crédito para<br>pequenos negócios</span>
+        </span>
+    </a>
+    <nav class="cabecalho-menu">
+        <a href="{{ url_for('dashboard') }}" class="{% if pagina_ativa == 'dashboard' %}ativo{% endif %}">Dashboard</a>
+        {% if eh_admin %}<a href="{{ url_for('listar_taxas') }}" class="{% if pagina_ativa == 'taxas' %}ativo{% endif %}">Taxas</a>{% endif %}
+        <a href="{{ url_for('simulacao') }}" class="{% if pagina_ativa == 'simulacao' %}ativo{% endif %}">Simulação</a>
+        <a href="{{ url_for('historico_emprestimos') }}" class="{% if pagina_ativa == 'emprestimos' %}ativo{% endif %}">Empréstimos</a>
+        <a href="{{ url_for('movimentacoes') }}" class="{% if pagina_ativa == 'movimentacoes' %}ativo{% endif %}">Movimentações</a>
+    </nav>
+    {% if session.get('usuario_id') %}
+    <div class="cabecalho-usuario">
+        <button type="button" class="botao-perfil-header" onclick="alternarMenuPerfil()" aria-label="Abrir opções do perfil" aria-expanded="false">
+            <img class="foto-perfil-header" src="{{ url_for('static', filename='uploads/' ~ session.get('usuario_foto', 'perfil-padrao.png')) }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='uploads/perfil-padrao.png') }}'" alt="Foto de perfil">
+        </button>
+        <div class="dados-usuario">
+            <span class="nome-usuario-header">{{ session.get('usuario_nome', '') }}</span>
+            <span class="email-usuario-header">{{ session.get('usuario_email', '') }}</span>
+            <button type="button" class="seta-perfil-header" onclick="alternarMenuPerfil()" aria-label="Mostrar opções do perfil" aria-expanded="false">
+                <img src="{{ url_for('static', filename='uploads/seta_indicadora.png') }}" alt="">
+            </button>
+            <div class="menu-perfil-header" id="menuPerfilHeader">
+                <a href="{{ url_for('perfil') }}" class="botao-editar-perfil">Editar perfil</a>
+                <button type="button" class="botao-sair-header" onclick="abrirModal()">Sair</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</header>
+
+    <main>
+
+        <section class="cabecalho-taxas">
+
+            <div class="titulo-pagina">
+                <div class="icone-taxas">
+                    <img src="{{ url_for('icone_taxas') }}" alt="Ícone de taxas">
+                </div>
+
+                <div class="texto-titulo">
+                    <h1>Administrar / Taxas</h1>
+                    <p>Administre suas taxas.</p>
+                </div>
+            </div>
+
+            <button
+                class="botao-cadastrar"
+                type="button"
+                onclick="window.location.href='{{ url_for('cadastrar_taxa') }}'">
+                + Cadastrar taxa
+            </button>
+
+        </section>
+
+        <section class="lista-taxas">
+
+            <h2>Lista de Taxas</h2>
+
+            <div class="tabela-taxas">
+
+                <div class="linha-titulo">
+                    <div>Data de referência</div>
+                    <div>Taxa mensal</div>
+                    <div>Ações</div>
+                </div>
+
+                {% for taxa in taxas %}
+
+                <div class="linha-taxa">
+
+                    <div class="valor-ano">
+                        {{ taxa.ano }}
+                    </div>
+
+                    <div class="valor-taxa">
+                        {{ taxa.taxa_mensal }}%
+                    </div>
+
+                    <div class="botoes-acoes">
+
+
+                    <button class="botao-editar" type="button" onclick="window.location.href='{{ url_for('editar_taxa', ano=taxa.ano) }}'">
+                        Editar
+                    </button>
+
+
+                        <button class="botao-excluir" type="button">
+                            Excluir
+                        </button>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+                <div class="mensagem-vazia"
+                    {% if taxas %}style="display: none;"{% else %}style="display: block;"{% endif %}>
+                    Não há taxas cadastradas.
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal de confirmação -->
+
+    <div class="fundo-modal" id="fundo-modal">
+
+        <div class="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-modal">
+
+            <div class="icone-modal">
+                <img
+                    src="{{ url_for('static', filename='uploads/icone_excluir.png') }}"
+                    alt="Ícone de exclusão">
+            </div>
+
+            <h2 id="titulo-modal">Deseja excluir esta taxa?</h2>
+
+            <p class="informacao-taxa" id="informacao-taxa">
+                Selecione uma taxa para excluir.
+            </p>
+
+            <div class="botoes-modal">
+
+                <button
+                    class="botao-confirmar"
+                    id="botao-confirmar"
+                    type="button">
+                    Excluir
+                </button>
+
+                <button
+                    class="botao-cancelar"
+                    id="botao-cancelar"
+                    type="button">
+                    Cancelar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        let taxaSelecionada = null;
+
+        const fundoModal = document.querySelector("#fundo-modal");
+        const informacaoTaxa = document.querySelector("#informacao-taxa");
+        const botaoConfirmar = document.querySelector("#botao-confirmar");
+        const botaoCancelar = document.querySelector("#botao-cancelar");
+        const botoesExcluir = document.querySelectorAll(".botao-excluir");
+        const mensagemVazia = document.querySelector(".mensagem-vazia");
+
+        // Abre o modal de exclusão
+        botoesExcluir.forEach(function(botao) {
+            botao.addEventListener("click", function() {
+
+                taxaSelecionada = botao.closest(".linha-taxa");
+
+                const ano = taxaSelecionada.querySelector(".valor-ano").textContent.trim();
+                const taxa = taxaSelecionada.querySelector(".valor-taxa").textContent.trim();
+
+                informacaoTaxa.textContent =
+                    "Ano: " + ano + " | Taxa mensal: " + taxa;
+
+                fundoModal.style.display = "flex";
+            });
+        });
+
+        // Fecha o modal
+        function fecharModal() {
+            fundoModal.style.display = "none";
+            taxaSelecionada = null;
+        }
+
+        botaoCancelar.addEventListener("click", fecharModal);
+
+        // Confirma a remoção visual da linha
+        botaoConfirmar.addEventListener("click", function() {
+
+            if (taxaSelecionada !== null) {
+                taxaSelecionada.remove();
+
+                const taxasRestantes =
+                    document.querySelectorAll(".linha-taxa");
+
+                if (taxasRestantes.length === 0) {
+                    mensagemVazia.style.display = "block";
+                }
+
+                fecharModal();
+            }
+        });
+
+        // Fecha ao clicar fora da caixa
+        fundoModal.addEventListener("click", function(evento) {
+            if (evento.target === fundoModal) {
+                fecharModal();
+            }
+        });
+
+        // Fecha ao pressionar Escape
+        document.addEventListener("keydown", function(evento) {
+            if (evento.key === "Escape" && fundoModal.style.display === "flex") {
+                fecharModal();
+            }
+        });
+    </script>
+
+
+<div class="fundo-modal" id="modalSair" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="tituloModalSair">
+    <div class="modal">
+        <div class="icone-sair"><img src="{{ url_for('static', filename='uploads/icone-sair.png') }}" alt="Ícone de sair"></div>
+        <h2 id="tituloModalSair">Deseja realmente sair?</h2>
+        <p>Suas informações serão mantidas.</p>
+        <div class="botoes-modal"><button type="button" class="botao-sair" onclick="sairDaConta()">Sair</button><button type="button" class="botao-cancelar" onclick="fecharModal()">Cancelar</button></div>
+    </div>
+</div>
+<script>
+function alternarMenuPerfil() {
+    const menu = document.getElementById("menuPerfilHeader");
+    const dados = document.querySelector(".dados-usuario");
+    const aberto = menu.classList.toggle("menu-aberto");
+    dados.classList.toggle("menu-aberto", aberto);
+    document.querySelectorAll(".botao-perfil-header, .seta-perfil-header").forEach(function(botao) {
+        botao.setAttribute("aria-expanded", aberto ? "true" : "false");
+    });
+}
+function abrirModal() { document.getElementById("modalSair").style.display = "flex"; }
+function fecharModal() { document.getElementById("modalSair").style.display = "none"; }
+function sairDaConta() { window.location.assign("{{ url_for('logout') }}"); }
+document.getElementById("modalSair").addEventListener("click", function(event) { if (event.target === this) fecharModal(); });
+document.addEventListener("keydown", function(event) { if (event.key === "Escape") fecharModal(); });
+</script>
+
+</body>
+</html>
